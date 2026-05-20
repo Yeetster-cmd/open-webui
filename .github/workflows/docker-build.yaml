@@ -15,7 +15,7 @@ jobs:
   build-main-image:
     runs-on: ${{ matrix.runner }}
     permissions:
-      contents: read
+      contents: write
       packages: write
     strategy:
       fail-fast: false
