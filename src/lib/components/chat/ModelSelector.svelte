@@ -2,6 +2,7 @@
 	import { models, showSettings, settings, user, mobile, config } from '$lib/stores';
 	import { thinkingBudget } from '$lib/stores/thinking';
 	import { onMount, tick, getContext } from 'svelte';
+import { fade } from 'svelte/transition';
 	import { toast } from 'svelte-sonner';
 	import Selector from './ModelSelector/Selector.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
@@ -13,22 +14,29 @@
 
 	// --- REASONING EFFORT STATE WITH VIEWPORT TRACKING ---
 	let showReasoningMenu = false;
+	let showConfigEditor = false;
 	let menuCoords = { top: 0, left: 0 }; // Stores live button coordinates
 
-	const budgets = [
-		{ value: 0, label: 'Flash' },
-		{ value: 1024, label: 'Standard Thinking' },
-		{ value: 2048, label: 'Extended Thinking' },
-		{ value: 4096, label: 'Deep Reasoning' }
+	const defaultBudgets = { flash: 0, standard: 1024, extended: 2048, deep: 4096 };
+
+	$: budgets = [
+		{ value: $settings?.thinkingBudgets?.flash ?? defaultBudgets.flash, label: 'Flash', description: 'Quickest reply' },
+		{ value: $settings?.thinkingBudgets?.standard ?? defaultBudgets.standard, label: 'Standard', description: 'Best for most questions' },
+		{ value: $settings?.thinkingBudgets?.extended ?? defaultBudgets.extended, label: 'Extended', description: 'Complex problem solving' },
+		{ value: $settings?.thinkingBudgets?.deep ?? defaultBudgets.deep, label: 'Deep Reasoning', description: 'Get Detailed Reports' }
 	];
+
+	let configValues = { ...defaultBudgets };
 
 	function toggleReasoningMenu(event: MouseEvent) {
 		showReasoningMenu = !showReasoningMenu;
+		if (!showReasoningMenu) {
+			showConfigEditor = false;
+		}
 		if (showReasoningMenu && event.currentTarget) {
-			// Measures exactly where the button is on your screen right now
 			const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
 			menuCoords = {
-				top: rect.bottom + 4, // Places it cleanly 4px below the button
+				top: rect.bottom + 4,
 				left: rect.left
 			};
 		}
@@ -37,6 +45,27 @@
 	function selectBudget(value: number) {
 		$thinkingBudget = value;
 		showReasoningMenu = false;
+	}
+
+	function openConfigEditor() {
+		configValues = {
+			flash: $settings?.thinkingBudgets?.flash ?? defaultBudgets.flash,
+			standard: $settings?.thinkingBudgets?.standard ?? defaultBudgets.standard,
+			extended: $settings?.thinkingBudgets?.extended ?? defaultBudgets.extended,
+			deep: $settings?.thinkingBudgets?.deep ?? defaultBudgets.deep
+		};
+		showConfigEditor = true;
+	}
+
+	async function saveConfigEditor() {
+		settings.set({ ...$settings, thinkingBudgets: { ...configValues } });
+		await updateUserSettings(localStorage.token, { ui: $settings });
+		showConfigEditor = false;
+		toast.success('Token limits updated');
+	}
+
+	function resetConfigEditor() {
+		configValues = { ...defaultBudgets };
 	}
 
 	export let selectedModels = [''];
@@ -82,7 +111,7 @@
 
 <div class="flex flex-col w-full items-start">
 	{#each selectedModels as selectedModel, selectedModelIdx}
-		<div class="flex w-full max-w-fit">
+		<div class="flex w-full max-w-fit items-center gap-1">
 			<div class="overflow-hidden w-full">
 				<div class="max-w-full {($settings?.highContrastMode ?? false) ? 'm-1' : 'mr-1'}">
 					<Selector
@@ -93,29 +122,65 @@
 							label: model.name,
 							model: model
 						}))}
+						triggerClassName="text-lg h-[32px]"
 						{pinModelHandler}
 						bind:value={selectedModel}
 					/>
 				</div>
 			</div>
-
-	<div class="relative inline-block text-left">
-			<button
-				type="button"
-				on:click|stopPropagation|preventDefault={toggleReasoningMenu}
-				class="-mt-[2px] flex items-center w-full text-left px-3 py-1 text-lg text-gray-300 dark:text-neutral-200 bg-transparent hover:bg-gray-100 dark:hover:bg-neutral-800/60 rounded-lg transition h-[32px] whitespace-nowrap min-w-max"
-			>
-				<span>Thinking Level</span>
-				<ChevronDown className="self-center ml-2 size-3" strokeWidth="2.5" />
-			</button>
+			<div class="relative inline-block text-left">
+				<button
+					type="button"
+					on:click|stopPropagation|preventDefault={toggleReasoningMenu}
+					class="flex items-center text-left px-3 py-1 text-lg text-gray-300 dark:text-neutral-200 bg-transparent hover:bg-gray-100 dark:hover:bg-neutral-800/60 rounded-lg transition h-[32px] whitespace-nowrap min-w-max"
+				>
+					<span>Thinking Level</span>
+					<ChevronDown className="self-center ml-2 size-3" strokeWidth="2.5" />
+				</button>
 
 			{#if showReasoningMenu}
-				<div class="fixed inset-0 z-[99998]" on:click|stopPropagation|preventDefault={() => showReasoningMenu = false}></div>
+				<div class="fixed inset-0 z-[99998]" on:click|stopPropagation|preventDefault={() => { showReasoningMenu = false; showConfigEditor = false; }}></div>
 
-				<div 
+				<div
+					in:fade={{ duration: 150 }}
+					out:fade={{ duration: 150 }}
 					class="fixed w-auto min-w-[190px] max-w-xs rounded-xl bg-white dark:bg-[#171717] border border-gray-100 dark:border-neutral-800/70 shadow-2xl z-[99999] overflow-hidden focus:outline-none whitespace-nowrap p-1"
 					style="top: {menuCoords.top}px; left: {menuCoords.left}px;"
 				>
+								<div transition:fade={{ duration: 150 }}>
+					{#if showConfigEditor}
+					<div class="p-2 space-y-2 bg-white dark:bg-[#171717]">
+						<div class="text-xs font-medium text-gray-500 dark:text-neutral-400 uppercase tracking-wide px-1">Tokens per Level</div>
+						{#each [{ key: 'flash', label: 'Flash' }, { key: 'standard', label: 'Standard' }, { key: 'extended', label: 'Extended' }, { key: 'deep', label: 'Deep' }] as level}
+							<div class="flex items-center justify-between gap-2">
+								<span class="text-sm text-gray-900 dark:text-neutral-200">{level.label}</span>
+								<input
+									type="number"
+									min="0"
+									step="256"
+									bind:value={configValues[level.key]}
+									class="w-24 px-2 py-1 text-sm rounded-lg bg-gray-100 dark:bg-[#262626] text-gray-900 dark:text-white border border-gray-200 dark:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-neutral-600"
+								/>
+							</div>
+						{/each}
+						<div class="flex gap-2 pt-1">
+							<button
+								type="button"
+								on:click|stopPropagation|preventDefault={resetConfigEditor}
+								class="flex-1 px-2 py-1.5 text-sm rounded-lg bg-gray-100 dark:bg-[#262626] text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-200 transition"
+							>
+								Reset
+							</button>
+							<button
+								type="button"
+								on:click|stopPropagation|preventDefault={saveConfigEditor}
+								class="flex-1 px-2 py-1.5 text-sm rounded-lg bg-white text-black border border-gray-300 hover:bg-gray-50 transition"
+							>
+								Save
+							</button>
+						</div>
+					</div>
+				{:else}
 					<div class="space-y-0.5">
 						{#each budgets as item}
 							<button
@@ -126,7 +191,10 @@
 										? 'bg-gray-100 dark:bg-[#262626] font-medium text-gray-900 dark:text-white' 
 										: 'text-gray-600 dark:text-neutral-400 hover:bg-gray-50 dark:hover:bg-[#262626]/50 hover:text-gray-900 dark:hover:text-neutral-200'}"
 							>
-								<span>{item.label}</span>
+								<div>
+									<span>{item.label}</span>
+									<span class="block text-[0.65rem] text-gray-400 dark:text-neutral-500">{item.description}</span>
+								</div>
 								{#if $thinkingBudget === item.value}
 									<svg class="w-4 h-4 text-gray-900 dark:text-white flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
 										<path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd" />
@@ -134,66 +202,75 @@
 								{/if}
 							</button>
 						{/each}
+						<div class="border-t border-gray-200 dark:border-neutral-700 my-1"></div>
+						<button
+							type="button"
+							on:click|stopPropagation|preventDefault={openConfigEditor}
+							class="w-full text-left px-3 py-2 text-sm transition rounded-lg text-gray-600 dark:text-neutral-400 hover:bg-gray-50 dark:hover:bg-[#262626]/50 hover:text-gray-900 dark:hover:text-neutral-200"
+						>
+							<span>Configure Tokens</span>
+						</button>
 					</div>
+				{/if}
+				</div>
 				</div>
 			{/if}
 		</div>
-
-			{#if $user?.role === 'admin' || ($user?.permissions?.chat?.multiple_models ?? true)}
-				{#if selectedModelIdx === 0}
-					<div
-						class="  self-center mx-1 disabled:text-gray-600 disabled:hover:text-gray-600 -translate-y-[0.5px]"
-					>
-						<Tooltip content={$i18n.t('Add Model')}>
-							<button
-								class=" "
-								{disabled}
-								on:click={() => {
-									selectedModels = [...selectedModels, ''];
-								}}
-								aria-label="Add Model"
+		{#if $user?.role === 'admin' || ($user?.permissions?.chat?.multiple_models ?? true)}
+			{#if selectedModelIdx === 0}
+				<div
+					class="self-center mx-1 disabled:text-gray-600 disabled:hover:text-gray-600 -translate-y-[0.5px]"
+				>
+					<Tooltip content={$i18n.t('Add Model')}>
+						<button
+							class=""
+							{disabled}
+							on:click={() => {
+								selectedModels = [...selectedModels, ''];
+							}}
+							aria-label="Add Model"
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke-width="2"
+								stroke="currentColor"
+								class="size-3.5"
 							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke-width="2"
-									stroke="currentColor"
-									class="size-3.5"
-								>
-									<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
-								</svg>
-							</button>
-						</Tooltip>
-					</div>
-				{:else}
-					<div
-						class="  self-center mx-1 disabled:text-gray-600 disabled:hover:text-gray-600 -translate-y-[0.5px]"
-					>
-						<Tooltip content={$i18n.t('Remove Model')}>
-							<button
-								{disabled}
-								on:click={() => {
-									selectedModels.splice(selectedModelIdx, 1);
-									selectedModels = selectedModels;
-								}}
-								aria-label="Remove Model"
+								<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
+							</svg>
+						</button>
+					</Tooltip>
+				</div>
+			{:else}
+				<div
+					class="self-center mx-1 disabled:text-gray-600 disabled:hover:text-gray-600 -translate-y-[0.5px]"
+				>
+					<Tooltip content={$i18n.t('Remove Model')}>
+						<button
+							{disabled}
+							on:click={() => {
+								selectedModels.splice(selectedModelIdx, 1);
+								selectedModels = selectedModels;
+							}}
+							aria-label="Remove Model"
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke-width="2"
+								stroke="currentColor"
+								class="size-3"
 							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke-width="2"
-									stroke="currentColor"
-									class="size-3"
-								>
-									<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15" />
-								</svg>
-							</button>
-						</Tooltip>
-					</div>
-				{/if}
+								<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15" />
+							</svg>
+						</button>
+					</Tooltip>
+				</div>
 			{/if}
+		{/if}
 		</div>
 	{/each}
 </div>
