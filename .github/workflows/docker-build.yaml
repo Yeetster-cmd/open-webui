@@ -113,7 +113,3 @@ jobs:
           retention-days: 1
 
 
-
-  # Copy images from GHCR to Docker Hub (best-effort, won't block GHCR)
-  copy-to-dockerhub:
-    runs-on: ubuntu-latest
