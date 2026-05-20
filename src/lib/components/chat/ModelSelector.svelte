@@ -18,15 +18,15 @@ import { fade } from 'svelte/transition';
 	let menuCoords = { top: 0, left: 0 }; // Stores live button coordinates
 
 	const defaultBudgets = { flash: 0, standard: 1024, extended: 2048, deep: 4096 };
+	const defaultKeys = ['flash', 'standard', 'extended', 'deep'] as const;
 
-	$: budgets = [
-		{ value: $settings?.thinkingBudgets?.flash ?? defaultBudgets.flash, label: 'Flash', description: 'Quickest reply' },
-		{ value: $settings?.thinkingBudgets?.standard ?? defaultBudgets.standard, label: 'Standard', description: 'Best for most questions' },
-		{ value: $settings?.thinkingBudgets?.extended ?? defaultBudgets.extended, label: 'Extended', description: 'Complex problem solving' },
-		{ value: $settings?.thinkingBudgets?.deep ?? defaultBudgets.deep, label: 'Deep Reasoning', description: 'Get Detailed Reports' }
-	];
+	$: budgets = defaultKeys.map((key) => ({
+		value: $settings?.thinkingBudgets?.[key]?.value ?? defaultBudgets[key],
+		label: key === 'flash' ? 'Flash' : key === 'standard' ? 'Standard' : key === 'extended' ? 'Extended' : 'Deep Reasoning',
+		description: key === 'flash' ? 'Quickest reply' : key === 'standard' ? 'Best for most questions' : key === 'extended' ? 'Complex problem solving' : 'Get Detailed Reports'
+	}));
 
-	let configValues = { ...defaultBudgets };
+	let configValues = { flash: { value: 0, systemPrompt: '' }, standard: { value: 1024, systemPrompt: '' }, extended: { value: 2048, systemPrompt: '' }, deep: { value: 4096, systemPrompt: '' } };
 
 	function toggleReasoningMenu(event: MouseEvent) {
 		showReasoningMenu = !showReasoningMenu;
@@ -49,10 +49,10 @@ import { fade } from 'svelte/transition';
 
 	function openConfigEditor() {
 		configValues = {
-			flash: $settings?.thinkingBudgets?.flash ?? defaultBudgets.flash,
-			standard: $settings?.thinkingBudgets?.standard ?? defaultBudgets.standard,
-			extended: $settings?.thinkingBudgets?.extended ?? defaultBudgets.extended,
-			deep: $settings?.thinkingBudgets?.deep ?? defaultBudgets.deep
+			flash: { value: $settings?.thinkingBudgets?.flash?.value ?? defaultBudgets.flash, systemPrompt: $settings?.thinkingBudgets?.flash?.systemPrompt ?? '' },
+			standard: { value: $settings?.thinkingBudgets?.standard?.value ?? defaultBudgets.standard, systemPrompt: $settings?.thinkingBudgets?.standard?.systemPrompt ?? '' },
+			extended: { value: $settings?.thinkingBudgets?.extended?.value ?? defaultBudgets.extended, systemPrompt: $settings?.thinkingBudgets?.extended?.systemPrompt ?? '' },
+			deep: { value: $settings?.thinkingBudgets?.deep?.value ?? defaultBudgets.deep, systemPrompt: $settings?.thinkingBudgets?.deep?.systemPrompt ?? '' }
 		};
 		showConfigEditor = true;
 	}
@@ -65,7 +65,7 @@ import { fade } from 'svelte/transition';
 	}
 
 	function resetConfigEditor() {
-		configValues = { ...defaultBudgets };
+		configValues = { flash: { value: 0, systemPrompt: '' }, standard: { value: 1024, systemPrompt: '' }, extended: { value: 2048, systemPrompt: '' }, deep: { value: 4096, systemPrompt: '' } };
 	}
 
 	export let selectedModels = [''];
@@ -149,18 +149,30 @@ import { fade } from 'svelte/transition';
 				>
 								<div transition:fade={{ duration: 150 }}>
 					{#if showConfigEditor}
-					<div class="p-2 space-y-2 bg-white dark:bg-[#171717]">
+					<div class="p-2 space-y-3 bg-white dark:bg-[#171717]">
 						<div class="text-xs font-medium text-gray-500 dark:text-neutral-400 uppercase tracking-wide px-1">Tokens per Level</div>
 						{#each [{ key: 'flash', label: 'Flash' }, { key: 'standard', label: 'Standard' }, { key: 'extended', label: 'Extended' }, { key: 'deep', label: 'Deep' }] as level}
-							<div class="flex items-center justify-between gap-2">
-								<span class="text-sm text-gray-900 dark:text-neutral-200">{level.label}</span>
-								<input
-									type="number"
-									min="0"
-									step="256"
-									bind:value={configValues[level.key]}
-									class="w-24 px-2 py-1 text-sm rounded-lg bg-gray-100 dark:bg-[#262626] text-gray-900 dark:text-white border border-gray-200 dark:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-neutral-600"
-								/>
+							<div class="space-y-1.5">
+								<span class="text-sm font-medium text-gray-900 dark:text-neutral-200">{level.label}</span>
+								<div class="flex items-center gap-2">
+									<label class="text-xs text-gray-500 dark:text-neutral-400 shrink-0">Tokens</label>
+									<input
+										type="number"
+										min="0"
+										step="256"
+										bind:value={configValues[level.key].value}
+										class="w-24 px-2 py-1 text-sm rounded-lg bg-gray-100 dark:bg-[#262626] text-gray-900 dark:text-white border border-gray-200 dark:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-neutral-600"
+									/>
+								</div>
+								<div>
+									<label class="text-xs text-gray-500 dark:text-neutral-400 block mb-1">System Prompt (optional)</label>
+									<textarea
+										bind:value={configValues[level.key].systemPrompt}
+										rows="3"
+										class="w-full px-2 py-1 text-sm rounded-lg bg-gray-100 dark:bg-[#262626] text-gray-900 dark:text-white border border-gray-200 dark:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-neutral-600 resize-none"
+										placeholder="Prompt for this thinking level..."
+									></textarea>
+								</div>
 							</div>
 						{/each}
 						<div class="flex gap-2 pt-1">
