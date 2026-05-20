@@ -124,14 +124,6 @@ jobs:
         include:
           - variant: main
             suffix: ""
-          - variant: cuda
-            suffix: "-cuda"
-          - variant: cuda126
-            suffix: "-cuda126"
-          - variant: ollama
-            suffix: "-ollama"
-          - variant: slim
-            suffix: "-slim"
     steps:
       - name: Set repository and image name to lowercase
         run: |
