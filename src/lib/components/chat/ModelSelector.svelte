@@ -83,6 +83,7 @@ import { fade } from 'svelte/transition';
 
 	export let selectedModels = [''];
 	export let disabled = false;
+	export let disableReasoning = false;
 
 	export let showSetDefault = true;
 
@@ -144,8 +145,10 @@ import { fade } from 'svelte/transition';
 			<div class="relative inline-block text-left">
 				<button
 					type="button"
-					on:click|stopPropagation|preventDefault={toggleReasoningMenu}
-					class="flex items-center text-left px-3 py-1 text-lg text-gray-300 dark:text-neutral-200 bg-transparent hover:bg-gray-100 dark:hover:bg-neutral-800/60 rounded-lg transition h-[32px] whitespace-nowrap min-w-max"
+					on:click|stopPropagation|preventDefault={() => !disableReasoning && toggleReasoningMenu(event)}
+					class="flex items-center text-left px-3 py-1 text-lg rounded-lg transition h-[32px] whitespace-nowrap min-w-max transition cursor-default
+					{disableReasoning ? 'text-gray-500 dark:text-neutral-600 bg-transparent' : 'text-gray-300 dark:text-neutral-200 bg-transparent hover:bg-gray-100 dark:hover:bg-neutral-800/60'}"
+					disabled={disableReasoning}
 				>
 					<span>Thinking Level</span>
 					<ChevronDown className="self-center ml-2 size-3" strokeWidth="2.5" />

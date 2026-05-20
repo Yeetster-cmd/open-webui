@@ -114,7 +114,7 @@
 			"
 				>
 					{#if showModelSelector}
-						<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
+						<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} disableReasoning={!!chat?.id} />
 					{/if}
 				</div>
 
