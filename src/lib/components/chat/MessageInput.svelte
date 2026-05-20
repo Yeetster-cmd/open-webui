@@ -1708,6 +1708,8 @@
 										</IntegrationsMenu>
 									{/if}
 
+		
+
 									{#if selectedModelIds.length === 1 && $models.find((m) => m.id === selectedModelIds[0])?.has_user_valves}
 										<div class="ml-1 flex gap-1.5">
 											<Tooltip content={$i18n.t('Valves')} placement="top">

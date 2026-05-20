@@ -15,41 +15,43 @@
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import equal from 'fast-deep-equal';
 
-	import {
-		chatId,
-		chats,
-		config,
-		type Model,
-		models,
-		tags as allTags,
-		settings,
-		showSidebar,
-		WEBUI_NAME,
-		banners,
-		user,
-		socket,
-		audioQueue,
-		showControls,
-		showCallOverlay,
-		currentChatPage,
-		temporaryChatEnabled,
-		mobile,
-		chatTitle,
-		showArtifacts,
-		artifactContents,
-		tools,
-		toolServers,
-		terminalServers,
-		functions,
-		selectedFolder,
-		pinnedChats,
-		showEmbeds,
-		selectedTerminalId,
-		showFileNavPath,
-		showFileNavDir,
-		chatRequestQueues,
-		desktopEvent
-	} from '$lib/stores';
+import {
+	chatId,
+	chats,
+	config,
+	type Model,
+	models,
+	tags as allTags,
+	settings,
+	showSidebar,
+	WEBUI_NAME,
+	banners,
+	user,
+	socket,
+	audioQueue,
+	showControls,
+	showCallOverlay,
+	currentChatPage,
+	temporaryChatEnabled,
+	mobile,
+	chatTitle,
+	showArtifacts,
+	artifactContents,
+	tools,
+	toolServers,
+	terminalServers,
+	functions,
+	selectedFolder,
+	pinnedChats,
+	showEmbeds,
+	selectedTerminalId,
+	showFileNavPath,
+	showFileNavDir,
+	chatRequestQueues,
+	desktopEvent
+} from '$lib/stores';
+
+import { thinkingBudget } from '$lib/stores/thinking';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
@@ -2294,11 +2296,20 @@
 			true;
 		// Always include system prompt — backend extracts it and prepends to DB messages.
 		// Only temp chats need conversation messages (persisted chats load from DB).
-		let messages = [
-			params?.system || $settings.system
-				? { role: 'system', content: `${params?.system ?? $settings?.system ?? ''}` }
-				: undefined
-		].filter(Boolean);
+		const thinkingLevelKeys = ['flash', 'standard', 'extended', 'deep'] as const;
+		const activeBudgetKey = thinkingLevelKeys.find(
+			(key) => $settings?.thinkingBudgets?.[key]?.value === $thinkingBudget
+		);
+		const thinkingSystemPrompt = activeBudgetKey ? $settings?.thinkingBudgets?.[activeBudgetKey]?.systemPrompt ?? '' : '';
+
+		let systemMessages: any[] = [];
+		if (thinkingSystemPrompt) {
+			systemMessages.push({ role: 'system', content: thinkingSystemPrompt });
+		}
+		if (params?.system || $settings.system) {
+			systemMessages.push({ role: 'system', content: `${params?.system ?? $settings?.system ?? ''}` });
+		}
+		let messages = systemMessages.length > 0 ? systemMessages : [];
 
 		if ($temporaryChatEnabled) {
 			messages = [
@@ -2409,7 +2420,8 @@
 				params: {
 					...$settings?.params,
 					...params,
-					stop: getStopTokens()
+					stop: getStopTokens(),
+					thinking_budget_tokens: $thinkingBudget
 				},
 
 				files: (files?.length ?? 0) > 0 ? files : undefined,
