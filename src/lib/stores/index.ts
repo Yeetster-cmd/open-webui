@@ -233,6 +233,7 @@ type Settings = {
 	recentEmojis?: string[];
 	pinnedMenuItems?: string[];
 	thinkingBudgets?: { flash: { value: number; systemPrompt: string }; standard: { value: number; systemPrompt: string }; extended: { value: number; systemPrompt: string }; deep: { value: number; systemPrompt: string } };
+	showThinkingSystemPrompts?: boolean;
 
 	system?: string;
 	seed?: number;

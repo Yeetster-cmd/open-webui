@@ -17,6 +17,8 @@ import { fade } from 'svelte/transition';
 	let showConfigEditor = false;
 	let menuCoords = { top: 0, left: 0 }; // Stores live button coordinates
 
+	$: SHOW_THINKING_SYSTEM_PROMPTS = $settings?.showThinkingSystemPrompts ?? false;
+
 	const defaultBudgets = { flash: 0, standard: 1024, extended: 2048, deep: 4096 };
 	const defaultKeys = ['flash', 'standard', 'extended', 'deep'] as const;
 
@@ -26,7 +28,12 @@ import { fade } from 'svelte/transition';
 		description: key === 'flash' ? 'Quickest reply' : key === 'standard' ? 'Best for most questions' : key === 'extended' ? 'Complex problem solving' : 'Get Detailed Reports'
 	}));
 
-	let configValues = { flash: { value: 0, systemPrompt: '' }, standard: { value: 1024, systemPrompt: '' }, extended: { value: 2048, systemPrompt: '' }, deep: { value: 4096, systemPrompt: '' } };
+	let configValues = {
+		flash: { value: 0, systemPrompt: 'reasoning_effort=None\nAnswer the user in a quick manner without asking for clarifications or overthinking.' },
+		standard: { value: 1024, systemPrompt: 'reasoning_effort=Standard\nAnswer the user\'s inquiry normally.' },
+		extended: { value: 2048, systemPrompt: 'reasoning_effort=High\nGo over everything you know about the topic being talked about and answer the user\'s inquiry. Ask for details if you need them.' },
+		deep: { value: 4096, systemPrompt: 'reasoning_effort=Max\nGo over everything you know about the topic being talked about, double check it and utilize tools if necessary. Create a thorough plan of action to the user\'s inquiry.' }
+	};
 
 	function toggleReasoningMenu(event: MouseEvent) {
 		showReasoningMenu = !showReasoningMenu;
@@ -49,23 +56,29 @@ import { fade } from 'svelte/transition';
 
 	function openConfigEditor() {
 		configValues = {
-			flash: { value: $settings?.thinkingBudgets?.flash?.value ?? defaultBudgets.flash, systemPrompt: $settings?.thinkingBudgets?.flash?.systemPrompt ?? '' },
-			standard: { value: $settings?.thinkingBudgets?.standard?.value ?? defaultBudgets.standard, systemPrompt: $settings?.thinkingBudgets?.standard?.systemPrompt ?? '' },
-			extended: { value: $settings?.thinkingBudgets?.extended?.value ?? defaultBudgets.extended, systemPrompt: $settings?.thinkingBudgets?.extended?.systemPrompt ?? '' },
-			deep: { value: $settings?.thinkingBudgets?.deep?.value ?? defaultBudgets.deep, systemPrompt: $settings?.thinkingBudgets?.deep?.systemPrompt ?? '' }
+			flash: { value: $settings?.thinkingBudgets?.flash?.value ?? defaultBudgets.flash, systemPrompt: $settings?.thinkingBudgets?.flash?.systemPrompt ?? 'reasoning_effort=None\nAnswer the user in a quick manner without asking for clarifications or overthinking.' },
+			standard: { value: $settings?.thinkingBudgets?.standard?.value ?? defaultBudgets.standard, systemPrompt: $settings?.thinkingBudgets?.standard?.systemPrompt ?? 'reasoning_effort=Standard\nAnswer the user\'s inquiry normally.' },
+			extended: { value: $settings?.thinkingBudgets?.extended?.value ?? defaultBudgets.extended, systemPrompt: $settings?.thinkingBudgets?.extended?.systemPrompt ?? 'reasoning_effort=High\nGo over everything you know about the topic being talked about and answer the user\'s inquiry. Ask for details if you need them.' },
+			deep: { value: $settings?.thinkingBudgets?.deep?.value ?? defaultBudgets.deep, systemPrompt: $settings?.thinkingBudgets?.deep?.systemPrompt ?? 'reasoning_effort=Max\nGo over everything you know about the topic being talked about, double check it and utilize tools if necessary. Create a thorough plan of action to the user\'s inquiry.' }
 		};
 		showConfigEditor = true;
 	}
 
 	async function saveConfigEditor() {
-		settings.set({ ...$settings, thinkingBudgets: { ...configValues } });
-		await updateUserSettings(localStorage.token, { ui: $settings });
+		const updatedSettings = { ...$settings, thinkingBudgets: { ...configValues } };
+		settings.set(updatedSettings);
+		await updateUserSettings(localStorage.token, { ui: updatedSettings });
 		showConfigEditor = false;
 		toast.success('Token limits updated');
 	}
 
 	function resetConfigEditor() {
-		configValues = { flash: { value: 0, systemPrompt: '' }, standard: { value: 1024, systemPrompt: '' }, extended: { value: 2048, systemPrompt: '' }, deep: { value: 4096, systemPrompt: '' } };
+		configValues = {
+			flash: { value: 0, systemPrompt: 'reasoning_effort=None\nAnswer the user in a quick manner without asking for clarifications or overthinking.' },
+			standard: { value: 1024, systemPrompt: 'reasoning_effort=Standard\nAnswer the user\'s inquiry normally.' },
+			extended: { value: 2048, systemPrompt: 'reasoning_effort=High\nGo over everything you know about the topic being talked about and answer the user\'s inquiry. Ask for details if you need them.' },
+			deep: { value: 4096, systemPrompt: 'reasoning_effort=Max\nGo over everything you know about the topic being talked about, double check it and utilize tools if necessary. Create a thorough plan of action to the user\'s inquiry.' }
+		};
 	}
 
 	export let selectedModels = [''];
@@ -164,6 +177,7 @@ import { fade } from 'svelte/transition';
 										class="w-24 px-2 py-1 text-sm rounded-lg bg-gray-100 dark:bg-[#262626] text-gray-900 dark:text-white border border-gray-200 dark:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-neutral-600"
 									/>
 								</div>
+								{#if SHOW_THINKING_SYSTEM_PROMPTS}
 								<div>
 									<label class="text-xs text-gray-500 dark:text-neutral-400 block mb-1">System Prompt (optional)</label>
 									<textarea
@@ -173,6 +187,7 @@ import { fade } from 'svelte/transition';
 										placeholder="Prompt for this thinking level..."
 									></textarea>
 								</div>
+								{/if}
 							</div>
 						{/each}
 						<div class="flex gap-2 pt-1">
