@@ -390,7 +390,8 @@ class ChatTable:
                 chat_item.chat = self._clean_null_bytes(chat)
                 chat_item.title = self._clean_null_bytes(chat['title']) if 'title' in chat else 'New Chat'
 
-                chat_item.updated_at = int(time.time())
+                if 'history' in chat or 'messages' in chat:
+                    chat_item.updated_at = int(time.time())
 
                 await db.commit()
 
