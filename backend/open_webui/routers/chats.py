@@ -976,7 +976,7 @@ async def update_chat_by_id(
             if msg.get('role') == 'assistant' and msg.get('output'):
                 msg['content'] = serialize_output(msg['output'])
 
-        chat = await Chats.update_chat_by_id(id, updated_chat, db=db)
+        chat = await Chats.update_chat_by_id(id, updated_chat, form_chat=form_data.chat, db=db)
         return ChatResponse(**chat.model_dump())
     else:
         raise HTTPException(

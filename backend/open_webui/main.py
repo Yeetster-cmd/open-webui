@@ -1882,7 +1882,7 @@ async def chat_completion(
                         existing_chat = await Chats.get_chat_by_id(chat_id)
                         if existing_chat:
                             updated = {**existing_chat.chat, 'files': chat_files}
-                            await Chats.update_chat_by_id(chat_id, updated)
+                            await Chats.update_chat_by_id(chat_id, updated, form_chat={'files': chat_files})
 
                     # Save user message to DB
                     user_message = metadata.get('user_message') or {}

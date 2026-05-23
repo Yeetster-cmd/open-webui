@@ -383,14 +383,17 @@ class ChatTable:
 
             return [ChatModel.model_validate(chat) for chat in chats]
 
-    async def update_chat_by_id(self, id: str, chat: dict, db: Optional[AsyncSession] = None) -> Optional[ChatModel]:
+    async def update_chat_by_id(
+        self, id: str, chat: dict, form_chat: Optional[dict] = None, db: Optional[AsyncSession] = None
+    ) -> Optional[ChatModel]:
         try:
             async with get_async_db_context(db) as db:
                 chat_item = await db.get(Chat, id)
                 chat_item.chat = self._clean_null_bytes(chat)
                 chat_item.title = self._clean_null_bytes(chat['title']) if 'title' in chat else 'New Chat'
 
-                if 'history' in chat or 'messages' in chat:
+                check = form_chat if form_chat is not None else chat
+                if 'history' in check or 'messages' in check:
                     chat_item.updated_at = int(time.time())
 
                 await db.commit()
