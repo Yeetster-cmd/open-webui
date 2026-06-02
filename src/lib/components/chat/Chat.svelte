@@ -2421,7 +2421,7 @@ import { thinkingBudget } from '$lib/stores/thinking';
 					...$settings?.params,
 					...params,
 					stop: getStopTokens(),
-					thinking_budget_tokens: $thinkingBudget
+					...(activeBudgetKey !== 'flash' && $thinkingBudget > 0 ? { thinking_budget_tokens: $thinkingBudget } : {})
 				},
 
 				files: (files?.length ?? 0) > 0 ? files : undefined,

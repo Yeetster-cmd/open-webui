@@ -234,6 +234,7 @@ type Settings = {
 	pinnedMenuItems?: string[];
 	thinkingBudgets?: { flash: { value: number; systemPrompt: string }; standard: { value: number; systemPrompt: string }; extended: { value: number; systemPrompt: string }; deep: { value: number; systemPrompt: string } };
 	showThinkingSystemPrompts?: boolean;
+	showThinkingSettings?: number;
 
 	system?: string;
 	seed?: number;
