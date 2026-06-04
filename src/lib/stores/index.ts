@@ -230,6 +230,8 @@ type Settings = {
 	chatDirection?: 'LTR' | 'RTL' | 'auto';
 	ctrlEnterToSend?: boolean;
 	renderMarkdownInPreviews?: boolean;
+	renderMarkdownInUserMessages?: boolean;
+	renderMarkdownInAssistantMessages?: boolean;
 	recentEmojis?: string[];
 	pinnedMenuItems?: string[];
 	thinkingBudgets?: { flash: { value: number; systemPrompt: string }; standard: { value: number; systemPrompt: string }; extended: { value: number; systemPrompt: string }; deep: { value: number; systemPrompt: string } };
@@ -308,6 +310,7 @@ type Config = {
 		providers: {
 			[key: string]: string;
 		};
+		auto_redirect?: boolean;
 	};
 	ui?: {
 		pending_user_overlay_title?: string;
