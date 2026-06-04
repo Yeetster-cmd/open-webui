@@ -11,7 +11,12 @@
 	dayjs.extend(duration);
 	dayjs.extend(relativeTime);
 
-	import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
+import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
+
+	import { fly } from 'svelte/transition';
+	import { flyAndScale } from '$lib/utils/transitions';
+	import { thinkingBudget } from '$lib/stores/thinking';
+	import { updateUserSettings } from '$lib/apis/users';
 
 	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
 	import { pickAndDownloadFile } from '$lib/utils/onedrive-file-picker';
@@ -81,6 +86,9 @@
 	import Photo from '../icons/Photo.svelte';
 	import Wrench from '../icons/Wrench.svelte';
 	import Sparkles from '../icons/Sparkles.svelte';
+	import LightBulb from '../icons/LightBulb.svelte';
+	import Check from '../icons/Check.svelte';
+	import ChevronLeft from '../icons/ChevronLeft.svelte';
 
 	import InputVariablesModal from './MessageInput/InputVariablesModal.svelte';
 	import Voice from '../icons/Voice.svelte';
@@ -140,6 +148,55 @@
 	export let pendingOAuthTools = [];
 
 	let showTerminalMenu = false;
+
+	// --- Thinking Level State ---
+	let showThinkingDropdown = false;
+	let thinkingTab = ''; // '', 'levels', 'config'
+	
+
+	const defaultBudgets = { flash: 0, standard: 512, extended: 2048, deep: -1 };
+	const defaultKeys = ['flash', 'standard', 'extended', 'deep'];
+
+	$: budgets = defaultKeys.map((key) => ({
+		key,
+		value: $settings?.thinkingBudgets?.[key]?.value ?? defaultBudgets[key],
+		label: key === 'flash' ? 'Flash' : key === 'standard' ? 'Standard' : key === 'extended' ? 'Extended' : 'Deep Reasoning',
+		description: key === 'flash' ? 'Quickest reply' : key === 'standard' ? 'Best for most questions' : key === 'extended' ? 'Complex problem solving' : 'Get Detailed Reports'
+	}));
+
+	let configValues = {
+		flash: { value: 0, systemPrompt: 'reasoning_effort=None\nAnswer the user in a quick manner without asking for clarifications or overthinking.' },
+		standard: { value: 512, systemPrompt: 'reasoning_effort=Standard\nAnswer the user\'s inquiry normally.' },
+		extended: { value: 2048, systemPrompt: 'reasoning_effort=High\nGo over everything you know about the topic being talked about and answer the user\'s inquiry. Ask for details if you need them.' },
+		deep: { value: -1, systemPrompt: 'reasoning_effort=Max\nGo over everything you know about the topic being talked about, double check it and utilize tools if necessary. Create a thorough plan of action to the user\'s inquiry.' }
+	};
+
+	const SHOW_THINKING_SYSTEM_PROMPTS = $settings?.showThinkingSystemPrompts ?? false;
+	const SHOW_THINKING_SETTINGS = $settings?.showThinkingSettings ?? 0;
+
+	function selectThinkingBudget(value) {
+		$thinkingBudget = value;
+		showThinkingDropdown = false;
+		thinkingTab = '';
+	}
+
+	async function saveConfigEditor() {
+		const updatedSettings = { ...$settings, thinkingBudgets: { ...configValues } };
+		settings.set(updatedSettings);
+		await updateUserSettings(localStorage.token, { ui: updatedSettings });
+		showThinkingDropdown = false;
+		thinkingTab = '';
+		toast.success('Token limits updated');
+	}
+
+	function resetConfigEditor() {
+		configValues = {
+			flash: { value: 0, systemPrompt: 'reasoning_effort=None\nAnswer the user in a quick manner without asking for clarifications or overthinking.' },
+			standard: { value: 512, systemPrompt: 'reasoning_effort=Standard\nAnswer the user\'s inquiry normally.' },
+			extended: { value: 2048, systemPrompt: 'reasoning_effort=High\nGo over everything you know about the topic being talked about and answer the user\'s inquiry. Ask for details if you need them.' },
+			deep: { value: -1, systemPrompt: 'reasoning_effort=Max\nGo over everything you know about the topic being talked about, double check it and utilize tools if necessary. Create a thorough plan of action to the user\'s inquiry.' }
+		};
+	}
 
 	export let messageQueue: { id: string; prompt: string; files: any[] }[] = [];
 	export let onQueueSendNow: (id: string) => void = () => {};
@@ -1667,6 +1724,176 @@
 											<PlusAlt className="size-5.5" />
 										</div>
 									</InputMenu>
+
+									<Dropdown
+									bind:show={showThinkingDropdown}
+									side="bottom"
+									align="start"
+									onOpenChange={(state) => {
+										if (!state) {
+											thinkingTab = '';
+										}
+									}}
+								>
+									<Tooltip content={$i18n.t('Thinking Level')} placement="top">
+										<button
+											id="thinking-level-button"
+											class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
+											type="button"
+										>
+											<LightBulb className="size-4.5" />
+										</button>
+									</Tooltip>
+									<div slot="content">
+										<div
+											class="w-56 rounded-2xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-lg outline-hidden"
+										>
+											{#if thinkingTab === ''}
+												<div in:fly={{ x: -20, duration: 150 }}>
+													<div class="px-2 flex flex-col gap-0.5">
+														{#each budgets as item}
+															<button
+																type="button"
+																on:click={() => selectThinkingBudget(item.value)}
+																class="group/item flex w-full text-left select-none items-center rounded-xl py-2 pl-3 pr-2 text-sm text-gray-700 dark:text-gray-300 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer justify-between gap-2
+																	{$thinkingBudget === item.value
+																		? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent font-medium'
+																		: ''}"
+															>
+																<div class="flex flex-col flex-1 min-w-0">
+																	<span class="truncate">{item.label}</span>
+																	<span class="text-xs text-gray-500 dark:text-gray-400 truncate">{item.description}</span>
+																</div>
+																{#if $thinkingBudget === item.value}
+																	<Check className="size-3 flex-shrink-0" />
+																{/if}
+															</button>
+														{/each}
+													</div>
+													{#if SHOW_THINKING_SETTINGS}
+													<div class="border-t border-gray-100 dark:border-gray-800"></div>
+												<button
+													type="button"
+													on:click={() => {
+														thinkingTab = 'config';
+													}}
+													class="group/item flex w-full text-left select-none items-center rounded-xl py-2 pl-3 pr-2 text-sm text-gray-500 dark:text-gray-400 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer justify-between gap-2"
+												>
+													<span>Settings</span>
+												</button>
+													{/if}
+											</div>
+											{:else if thinkingTab === 'levels'}
+												<div in:fly={{ x: -20, duration: 150 }}>
+													<div class="px-2 pt-1">
+														<button
+															class="flex w-full gap-2 items-center px-3 py-2 text-sm select-none rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-75 cursor-pointer"
+															on:click={() => {
+																thinkingTab = '';
+															}}
+														>
+															<ChevronLeft />
+															<div>{$i18n.t('Thinking Level')}</div>
+														</button>
+													</div>
+
+													<div class="px-2 flex flex-col gap-0.5">
+														{#each budgets as item}
+															<button
+																type="button"
+																on:click={() => selectThinkingBudget(item.value)}
+																class="group/item flex w-full text-left select-none items-center rounded-xl py-2 pl-3 pr-2 text-sm text-gray-700 dark:text-gray-300 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer justify-between gap-2
+																	{$thinkingBudget === item.value
+																		? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent font-medium'
+																		: ''}"
+															>
+																<div class="flex flex-col flex-1 min-w-0">
+																	<span class="truncate">{item.label}</span>
+																	<span class="text-xs text-gray-500 dark:text-gray-400 truncate">{item.description}</span>
+																</div>
+																{#if $thinkingBudget === item.value}
+																	<Check className="size-3 flex-shrink-0" />
+																{/if}
+															</button>
+														{/each}
+													</div>
+													{#if SHOW_THINKING_SETTINGS}
+													<div class="border-t border-gray-100 dark:border-gray-800"></div>
+													<button
+														type="button"
+														on:click={() => {
+															thinkingTab = 'config';
+														}}
+														class="group/item flex w-full text-left select-none items-center rounded-xl py-2 pl-3 pr-2 text-sm text-gray-500 dark:text-gray-400 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer justify-between gap-2"
+													>
+														<span>Settings</span>
+													</button>
+													{/if}
+												</div>
+											{:else if thinkingTab === 'config' && SHOW_THINKING_SETTINGS}
+												<div in:fly={{ x: 20, duration: 150 }}>
+													<div class="px-2 pt-1">
+														<button
+															class="flex w-full gap-2 items-center px-3 py-2 text-sm select-none rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-75"
+															on:click={() => {
+																thinkingTab = 'levels';
+															}}
+														>
+															<ChevronLeft />
+															<div>{$i18n.t('Thinking Level')}</div>
+														</button>
+													</div>
+
+													<div class="p-3 space-y-3">
+														<div class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide px-1">Tokens per Level</div>
+														{#each [{ key: 'flash', label: 'Flash' }, { key: 'standard', label: 'Standard' }, { key: 'extended', label: 'Extended' }, { key: 'deep', label: 'Deep' }] as level}
+															<div class="space-y-1.5">
+																<span class="text-sm font-medium text-gray-700 dark:text-gray-200">{level.label}</span>
+																<div class="flex items-center gap-2">
+																	<label class="text-xs text-gray-500 dark:text-gray-400 shrink-0">Tokens</label>
+																	<input
+																		type="number"
+																		min="0"
+																		step="256"
+																		bind:value={configValues[level.key].value}
+																		class="w-24 px-2 py-1 text-sm rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-600"
+																	/>
+																</div>
+																{#if SHOW_THINKING_SYSTEM_PROMPTS}
+																<div>
+																	<label class="text-xs text-gray-500 dark:text-gray-400 block mb-1">System Prompt (optional)</label>
+																	<textarea
+																		bind:value={configValues[level.key].systemPrompt}
+																		rows="3"
+																		class="w-full px-2 py-1 text-sm rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-300 dark:focus:ring-gray-600 resize-none"
+																		placeholder="Prompt for this thinking level..."
+																	></textarea>
+																</div>
+																{/if}
+															</div>
+														{/each}
+														<div class="flex gap-2 pt-1">
+															<button
+																type="button"
+																on:click={resetConfigEditor}
+																class="flex-1 px-2 py-1.5 text-sm rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-all duration-150"
+															>
+																Reset
+															</button>
+															<button
+																type="button"
+																on:click={saveConfigEditor}
+																class="flex-1 px-2 py-1.5 text-sm rounded-lg bg-white text-black border border-gray-300 hover:bg-gray-50 transition-all duration-150"
+															>
+																Save
+															</button>
+														</div>
+													</div>
+												</div>
+											{/if}
+										</div>
+									</div>
+								</Dropdown>
 
 									{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || (toggleFilters && toggleFilters.length > 0)}
 										<div
