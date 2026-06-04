@@ -1739,8 +1739,7 @@ import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
 										</button>
 									</InputMenu>
 
-<<<<<<< HEAD
-									<Dropdown
+										<Dropdown
 									bind:show={showThinkingDropdown}
 									side="bottom"
 									align="start"
