@@ -20,9 +20,11 @@ from fastapi import (
 from fastapi.responses import RedirectResponse, StreamingResponse
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.events import EVENTS, publish_event
 from open_webui.env import ENABLE_PROFILE_IMAGE_URL_FORWARDING, PROFILE_IMAGE_ALLOWED_MIME_TYPES
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
+from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.models import (
     ModelAccessListResponse,
@@ -38,12 +40,21 @@ from open_webui.models.models import (
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.chat_variables import get_chat_variables_schema
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def add_chat_variables_schema(model_dict: dict) -> dict:
+    system = (model_dict.get('params') or {}).get('system') if isinstance(model_dict.get('params'), dict) else None
+    schema = get_chat_variables_schema(system)
+    if schema:
+        model_dict.setdefault('meta', {})['chat_variables_schema'] = schema
+    return model_dict
 
 
 def _safe_static_redirect_path(url: str) -> str | None:
@@ -60,6 +71,9 @@ def _safe_static_redirect_path(url: str) -> str | None:
         if decoded == path:
             break
         path = decoded
+    # Fail closed: a value still encoded after the cap would be decoded further downstream.
+    if unquote(path) != path:
+        return None
     if '\x00' in path or '\\' in path:
         return None
     if not path.startswith('/'):
@@ -114,7 +128,11 @@ async def _verify_knowledge_file_access(
 PAGE_ITEM_COUNT = 30
 
 
-@router.get('/list', response_model=ModelAccessListResponse)  # do NOT use "/" as path, conflicts with main.py
+@router.get(
+    '/list',
+    response_model=ModelAccessListResponse,
+    response_model_exclude={'items': {'__all__': {'meta': {'profile_image_url'}}}},
+)  # do NOT use "/" as path, conflicts with main.py
 async def get_models(
     query: str | None = None,
     view_option: str | None = None,
@@ -168,19 +186,19 @@ async def get_models(
     # Strip profile_image_url from meta — images are served via /model/profile/image.
     items = []
     for model in result.items:
-        data = model.model_dump()
+        data = add_chat_variables_schema(model.model_dump())
         if data.get('meta'):
             data['meta'].pop('profile_image_url', None)
-        items.append(
-            ModelAccessResponse(
-                **data,
-                write_access=(
-                    (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
-                    or user.id == model.user_id
-                    or model.id in writable_model_ids
-                ),
-            )
+        write_access = (
+            (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
+            or user.id == model.user_id
+            or model.id in writable_model_ids
         )
+        # Strip params (system prompt and other curated config) for read-only
+        # callers, mirroring the per-id endpoint.
+        if not write_access:
+            data['params'] = {}
+        items.append(ModelAccessResponse(**data, write_access=write_access))
 
     return ModelAccessListResponse(
         items=items,
@@ -193,9 +211,19 @@ async def get_models(
 ###########################
 
 
+@router.get('/base/tags', response_model=list[str])
+async def get_base_model_tags(user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
+    tags = await Models.get_all_tags(user_id=user.id, is_admin=True, is_base_model=True, db=db)
+    return sorted(tags)
+
+
 @router.get('/base', response_model=list[ModelResponse])
-async def get_base_models(user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
-    return await Models.get_base_models(db=db)
+async def get_base_models(
+    tag: str | None = None,
+    user=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    return await Models.get_base_models(tag=tag, db=db)
 
 
 ###########################
@@ -227,7 +255,7 @@ async def create_new_model(
 ):
     """Create a new workspace model entry."""
     if user.role != 'admin' and not await has_permission(
-        user.id, 'workspace.models', request.app.state.config.USER_PERMISSIONS, db=db
+        user.id, 'workspace.models', await Config.get('user.permissions'), db=db
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -255,7 +283,7 @@ async def create_new_model(
         )
 
         form_data.access_grants = await filter_allowed_access_grants(
-            request.app.state.config.USER_PERMISSIONS,
+            await Config.get('user.permissions'),
             user.id,
             user.role,
             form_data.access_grants,
@@ -264,6 +292,13 @@ async def create_new_model(
 
         model = await Models.insert_new_model(form_data, user.id, db=db)
         if model:
+            await publish_event(
+                request,
+                EVENTS.MODEL_CREATED,
+                actor=user,
+                subject_id=model.id,
+                data={'name': model.name},
+            )
             return model
         else:
             raise HTTPException(
@@ -286,7 +321,7 @@ async def export_models(
     if user.role != 'admin' and not await has_permission(
         user.id,
         'workspace.models_export',
-        request.app.state.config.USER_PERMISSIONS,
+        await Config.get('user.permissions'),
         db=db,
     ):
         raise HTTPException(
@@ -319,7 +354,7 @@ async def import_models(
     if user.role != 'admin' and not await has_permission(
         user.id,
         'workspace.models_import',
-        request.app.state.config.USER_PERMISSIONS,
+        await Config.get('user.permissions'),
         db=db,
     ):
         raise HTTPException(
@@ -356,10 +391,12 @@ async def import_models(
             else:
                 writable_model_ids = set(existing_model_ids)
 
+            imported_ids = []
             for model_data in data:
                 model_id = model_data.get('id')
 
                 if model_id and is_valid_model_id(model_id):
+                    imported_ids.append(model_id)
                     # Defense-in-depth: skip models referencing inaccessible files
                     try:
                         await _verify_knowledge_file_access(
@@ -391,7 +428,10 @@ async def import_models(
                             continue
 
                         # Update existing model
-                        model_data['meta'] = model_data.get('meta', {})
+                        model_data['meta'] = {
+                            **existing_model.meta.model_dump(),
+                            **(model_data.get('meta') or {}),
+                        }
                         model_data['params'] = model_data.get('params', {})
 
                         updated_model = ModelForm(**{**existing_model.model_dump(), **model_data})
@@ -400,7 +440,7 @@ async def import_models(
                         # metadata-only imports.
                         if 'access_grants' in model_data:
                             updated_model.access_grants = await filter_allowed_access_grants(
-                                request.app.state.config.USER_PERMISSIONS,
+                                await Config.get('user.permissions'),
                                 user.id,
                                 user.role,
                                 updated_model.access_grants,
@@ -413,13 +453,20 @@ async def import_models(
                         model_data['params'] = model_data.get('params', {})
                         new_model = ModelForm(**model_data)
                         new_model.access_grants = await filter_allowed_access_grants(
-                            request.app.state.config.USER_PERMISSIONS,
+                            await Config.get('user.permissions'),
                             user.id,
                             user.role,
                             new_model.access_grants,
                             'sharing.public_models',
                         )
                         await Models.insert_new_model(user_id=user.id, form_data=new_model, db=db)
+            await publish_event(
+                request,
+                EVENTS.MODEL_IMPORTED,
+                actor=user,
+                subject_type='model',
+                data={'count': len(imported_ids), 'model_ids': imported_ids},
+            )
             return True
         else:
             raise HTTPException(status_code=400, detail='Invalid JSON format')
@@ -444,7 +491,15 @@ async def sync_models(
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    return await Models.sync_models(user.id, form_data.models, db=db)
+    models = await Models.sync_models(user.id, form_data.models, db=db)
+    await publish_event(
+        request,
+        EVENTS.MODEL_SYNCED,
+        actor=user,
+        subject_type='model',
+        data={'count': len(models), 'model_ids': [model.id for model in models]},
+    )
+    return models
 
 
 ###########################
@@ -481,6 +536,7 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user), db: AsyncSes
             db=db,
         ):
             model_dict = model.model_dump()
+            model_dict = add_chat_variables_schema(model_dict)
             # Strip params (system prompt and other admin-curated config)
             # for read-only callers — matches the params strip already
             # enforced on /api/models in utils/models.py.  Owners, admins
@@ -528,11 +584,7 @@ async def get_model_profile_image(
 
     # Fallback: check arena models stored in config (not in the DB)
     if not profile_image_url:
-        arena_models = getattr(
-            getattr(request.app.state, 'config', None),
-            'EVALUATION_ARENA_MODELS',
-            [],
-        )
+        arena_models = await Config.get('evaluation.arena.models', []) or []
         for arena_model in arena_models:
             if arena_model.get('id') == id:
                 profile_image_url = arena_model.get('meta', {}).get('profile_image_url')
@@ -596,7 +648,9 @@ async def get_model_profile_image(
 
 
 @router.post('/model/toggle', response_model=ModelResponse | None)
-async def toggle_model_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def toggle_model_by_id(
+    request: Request, id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
     model = await Models.get_model_by_id(id, db=db)
     if model:
         if (
@@ -613,6 +667,14 @@ async def toggle_model_by_id(id: str, user=Depends(get_verified_user), db: Async
             model = await Models.toggle_model_by_id(id, db=db)
 
             if model:
+                await publish_event(
+                    request,
+                    EVENTS.MODEL_ENABLED if model.is_active else EVENTS.MODEL_DISABLED,
+                    actor=user,
+                    subject_id=model.id,
+                    subject_type='model',
+                    data={'name': model.name},
+                )
                 return model
             else:
                 raise HTTPException(
@@ -673,8 +735,14 @@ async def update_model_by_id(
         db,
     )
 
+    if 'base_model_id' not in form_data.model_fields_set:
+        form_data.base_model_id = model.base_model_id
+
+    if 'profile_image_url' not in form_data.meta.model_fields_set:
+        form_data.meta.profile_image_url = model.meta.profile_image_url
+
     form_data.access_grants = await filter_allowed_access_grants(
-        request.app.state.config.USER_PERMISSIONS,
+        await Config.get('user.permissions'),
         user.id,
         user.role,
         form_data.access_grants,
@@ -682,6 +750,14 @@ async def update_model_by_id(
     )
 
     model = await Models.update_model_by_id(form_data.id, ModelForm(**form_data.model_dump()), db=db)
+    if model:
+        await publish_event(
+            request,
+            EVENTS.MODEL_UPDATED,
+            actor=user,
+            subject_id=model.id,
+            data={'name': model.name},
+        )
     return model
 
 
@@ -746,7 +822,7 @@ async def update_model_access_by_id(
         )
 
     form_data.access_grants = await filter_allowed_access_grants(
-        request.app.state.config.USER_PERMISSIONS,
+        await Config.get('user.permissions'),
         user.id,
         user.role,
         form_data.access_grants,
@@ -757,7 +833,14 @@ async def update_model_access_by_id(
 
     await Models.update_model_updated_at_by_id(form_data.id, db=db)
 
-    return await Models.get_model_by_id(form_data.id, db=db)
+    model = await Models.get_model_by_id(form_data.id, db=db)
+    await publish_event(
+        request,
+        EVENTS.MODEL_ACCESS_UPDATED,
+        actor=user,
+        subject_id=form_data.id,
+    )
+    return model
 
 
 ############################
@@ -767,6 +850,7 @@ async def update_model_access_by_id(
 
 @router.post('/model/delete', response_model=bool)
 async def delete_model_by_id(
+    request: Request,
     form_data: ModelIdForm,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
@@ -795,10 +879,22 @@ async def delete_model_by_id(
         )
 
     result = await Models.delete_model_by_id(form_data.id, db=db)
+    if result:
+        await publish_event(
+            request,
+            EVENTS.MODEL_DELETED,
+            actor=user,
+            subject_id=form_data.id,
+            data={'name': model.name},
+        )
     return result
 
 
 @router.delete('/delete/all', response_model=bool)
-async def delete_all_models(user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
+async def delete_all_models(
+    request: Request, user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)
+):
     result = await Models.delete_all_models(db=db)
+    if result:
+        await publish_event(request, EVENTS.MODEL_DELETED, actor=user, subject_type='model')
     return result
