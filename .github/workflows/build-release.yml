@@ -50,7 +50,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "v${{ steps.get_version.outputs.version }}" \
+          gh release create "v1.11.0" \
             --title "v${{ steps.get_version.outputs.version }}" \
             --notes-file /tmp/release-notes.md
 
