@@ -42,7 +42,13 @@ jobs:
 
       - name: Free disk space
         if: matrix.variant.free_disk
-        run: rm -rf /opt/hostedtoolcache
+        run: rm -rf /opt/hostedtoolcache |
+          sudo swapoff -a
+          sudo rm -f /swapfile
+          sudo fallocate -l 8G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
 
       - name: Checkout repository
         uses: actions/checkout@v5
