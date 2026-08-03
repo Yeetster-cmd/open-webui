@@ -45,15 +45,6 @@ jobs:
           VERSION="${{ steps.get_version.outputs.version }}"
           awk "/^## \[${VERSION}\]/{found=1; next} /^## \[/{if(found) exit} found{print}" CHANGELOG.md > /tmp/release-notes.md
 
-      # Creates the release using the corrected permissions
-      - name: Create GitHub release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release create "v1.11.0" \
-            --title "v${{ steps.get_version.outputs.version }}" \
-            --notes-file /tmp/release-notes.md
-
       # Upload your artifacts (Note: This saves them to the GitHub Actions run, not the release itself)
       - name: Upload package artifact
         uses: actions/upload-artifact@v4
