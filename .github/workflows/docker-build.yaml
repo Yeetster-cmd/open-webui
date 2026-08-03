@@ -58,7 +58,7 @@ jobs:
           awk '
             /^FROM --platform=\$BUILDPLATFORM node:/ {
               print
-              print "ENV NODE_OPTIONS=\"--max-old-space-size=12288\""
+              print "ENV NODE_OPTIONS=\"--max-old-space-size=4096\""
               next
             }
             { print }
