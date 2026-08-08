@@ -41,7 +41,7 @@ RUN npm ci --force
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
 # Fixes the Node compiler crashing on large asset pools
-ENV NODE_OPTIONS="--max-old-space-size=4096"
+ENV NODE_OPTIONS="--max-old-space-size=8192"
 RUN npm run build
 
 ######## WebUI backend ########
