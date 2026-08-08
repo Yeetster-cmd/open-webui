@@ -54,7 +54,6 @@ import {
 	import { refreshChatList, refreshFolderChatLists } from '$lib/stores/chatList';
 	import { thinkingBudget } from '$lib/stores/thinking';
 
-	import { thinkingBudget } from '$lib/stores/thinking';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
