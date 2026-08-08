@@ -48,10 +48,11 @@ jobs:
       # --- ADDED SWAP SPACE TO FIX OUT-OF-MEMORY (OOM) ERRORS ---
       - name: Allocate Swap Space
         run: |
-          sudo fallocate -l 4G /swapfile
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
+          # Use a different name to avoid conflicting with the runner's default swap
+          sudo fallocate -l 4G /swapfile-extra || sudo dd if=/dev/zero of=/swapfile-extra bs=1M count=4096
+          sudo chmod 600 /swapfile-extra
+          sudo mkswap /swapfile-extra
+          sudo swapon /swapfile-extra
       # ----------------------------------------------------------
 
       - name: Set up Docker Buildx
