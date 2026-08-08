@@ -97,6 +97,7 @@ jobs:
           sbom: true
           build-args: |
             BUILD_HASH=${{ github.sha }}
+            --verbose
 
       - name: Export digest
         run: |
@@ -111,5 +112,4 @@ jobs:
           path: /tmp/digests/*
           if-no-files-found: error
           retention-days: 1
-
 
