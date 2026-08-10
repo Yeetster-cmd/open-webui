@@ -3849,6 +3849,7 @@ import {
 					{:else}
 						<Navbar
 							bind:this={navbarElement}
+							bind:selectedModels
 							{readOnly}
 							chat={{
 								id: $chatId,

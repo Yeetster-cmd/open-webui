@@ -65,7 +65,7 @@
 	};
 
 	let showShareChatModal = false;
-	let selectedModels = [''];
+	export let selectedModels = [''];
 	export let showModelSelector = true;
 	let showDownloadChatModal = false;
 </script>
