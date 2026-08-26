@@ -6,6 +6,7 @@
 	import Document from '$lib/components/icons/Document.svelte';
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 	import Link from '$lib/components/icons/Link.svelte';
+	import LightBulb from '$lib/components/icons/LightBulb.svelte';
 	import Lock from '$lib/components/icons/Lock.svelte';
 	import Photo from '$lib/components/icons/Photo.svelte';
 	import QueueList from '$lib/components/icons/QueueList.svelte';
@@ -83,6 +84,8 @@
 	<SoundHigh {className} {strokeWidth} />
 {:else if id === 'images'}
 	<Photo {className} {strokeWidth} />
+{:else if id === 'thinking'}
+	<LightBulb {className} {strokeWidth} />
 {:else if id === 'pipelines'}
 	<QueueList {className} {strokeWidth} />
 {:else if id === 'db'}

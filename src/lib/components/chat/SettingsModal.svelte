@@ -5,7 +5,7 @@
 	import { toast } from 'svelte-sonner';
 	import { config, models, settings, user } from '$lib/stores';
 	import type { SettingsModalRequest } from '$lib/stores';
-	import { updateUserSettings } from '$lib/apis/users';
+	import { getUserSettings, updateUserSettings } from '$lib/apis/users';
 	import { getBackendConfig, getModels as _getModels } from '$lib/apis';
 
 	import Modal from '../common/Modal.svelte';
@@ -51,6 +51,7 @@
 	import AdminCodeExecution from '$lib/components/admin/Settings/CodeExecution.svelte';
 	import AdminInterface from '$lib/components/admin/Settings/Interface.svelte';
 	import AdminAudio from '$lib/components/admin/Settings/Audio.svelte';
+	import AdminThinking from '$lib/components/admin/Settings/Thinking.svelte';
 	import AdminImages from '$lib/components/admin/Settings/Images.svelte';
 	import AdminPipelines from '$lib/components/admin/Settings/Pipelines.svelte';
 	import AdminDatabase from '$lib/components/admin/Settings/Database.svelte';
@@ -61,6 +62,35 @@
 	let modalShow = false;
 	let lastShow: boolean | string | SettingsModalRequest = false;
 	let tabState: Record<string, unknown> | null = null;
+	let personalUiSettings: Record<string, any> = {};
+
+	const mergeUiSettings = (defaults: Record<string, any>, userSettings: Record<string, any>) => {
+		const merged = { ...defaults };
+		for (const [key, value] of Object.entries(userSettings)) {
+			const defaultValue = merged[key];
+			merged[key] =
+				defaultValue &&
+				value &&
+				typeof defaultValue === 'object' &&
+				typeof value === 'object' &&
+				!Array.isArray(defaultValue) &&
+				!Array.isArray(value)
+					? mergeUiSettings(defaultValue, value)
+					: value;
+		}
+		return merged;
+	};
+
+	const loadPersonalUiSettings = async () => {
+		const userSettings = await getUserSettings(localStorage.token, true).catch((error) => {
+			console.error(error);
+			return null;
+		});
+		personalUiSettings =
+			userSettings?.ui && typeof userSettings.ui === 'object' && !Array.isArray(userSettings.ui)
+				? userSettings.ui
+				: {};
+	};
 
 	$: if (show !== lastShow) {
 		lastShow = show;
@@ -70,13 +100,18 @@
 			show = true;
 			lastShow = true;
 			modalShow = true;
+			loadPersonalUiSettings();
 		} else if (typeof show === 'string') {
 			selectedTab = show;
 			show = true;
 			lastShow = true;
 			modalShow = true;
+			loadPersonalUiSettings();
 		} else {
 			modalShow = show;
+			if (show) {
+				loadPersonalUiSettings();
+			}
 			if (!show) {
 				selectedTab = 'general';
 				tabState = null;
@@ -131,6 +166,7 @@
 		'admin:interface': 'Experience',
 		'admin:audio': 'Experience',
 		'admin:images': 'Experience',
+		'admin:thinking': 'Experience',
 		'admin:db': 'Data'
 	};
 	const settingGroupTitle = (tabId: string) =>
@@ -240,6 +276,8 @@
 				'iframe sandbox allow same origin',
 				'iframesandboxallowforms',
 				'iframesandboxallowsameorigin',
+				'terminal preview allow same origin',
+				'terminalpreviewallowsameorigin',
 				'imagecompression',
 				'image compression',
 				'imagemaxcompressionsize',
@@ -708,6 +746,11 @@
 			keywords: ['images', 'generation', 'dalle', 'stable diffusion', 'comfyui', 'automatic1111']
 		},
 		{
+			id: 'admin:thinking',
+			title: 'Thinking',
+			keywords: ['thinking', 'thinking budget', 'thinking level', 'reasoning', 'tokens', 'system prompt']
+		},
+		{
 			id: 'admin:evaluations',
 			title: 'Evaluations',
 			keywords: ['evaluations', 'feedback', 'rating', 'arena', 'leaderboard', 'preference']
@@ -818,7 +861,12 @@
 		console.log(updated);
 		await settings.set({ ...$settings, ...updated });
 		await models.set(await getModels());
-		await updateUserSettings(localStorage.token, { ui: $settings });
+		const saved = await updateUserSettings(localStorage.token, { ui: $settings });
+		personalUiSettings =
+			saved?.ui && typeof saved.ui === 'object' && !Array.isArray(saved.ui) ? saved.ui : {};
+		await settings.set(
+			mergeUiSettings($config?.ui?.default_interface_settings ?? {}, personalUiSettings)
+		);
 	};
 
 	const getModels = async () => {
@@ -886,7 +934,7 @@
 <Modal
 	size="full"
 	containerClassName="p-4 sm:p-6 lg:p-8"
-	className="!w-[calc(100vw-2rem)] sm:!w-[calc(100vw-3rem)] lg:!w-[calc(100vw-4rem)] !max-w-[80rem] h-[min(54rem,calc(100dvh-4rem))] max-h-[calc(100dvh-4rem)] flex flex-col md:flex-row bg-white dark:bg-gray-900 rounded-4xl"
+	className="!w-[calc(100vw-2rem)] sm:!w-[calc(100vw-3rem)] lg:!w-[calc(100vw-4rem)] !max-w-[80rem] h-[min(max(54rem,80dvh),calc(100dvh-4rem))] max-h-[calc(100dvh-4rem)] flex flex-col md:flex-row bg-white dark:bg-gray-900 rounded-4xl overflow-hidden"
 	bind:show={modalShow}
 >
 	<nav
@@ -1169,6 +1217,7 @@
 			{:else if selectedTab === 'interface'}
 				<Interface
 					{saveSettings}
+					personalSettingsValue={personalUiSettings}
 					on:save={() => {
 						toast.success($i18n.t('Settings saved successfully!'));
 					}}
@@ -1260,6 +1309,12 @@
 			{:else if selectedTab === 'admin:images'}
 				<AdminImages
 					on:save={() => {
+						toast.success($i18n.t('Settings saved successfully!'));
+					}}
+				/>
+			{:else if selectedTab === 'admin:thinking'}
+				<AdminThinking
+					saveHandler={() => {
 						toast.success($i18n.t('Settings saved successfully!'));
 					}}
 				/>
