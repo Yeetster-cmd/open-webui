@@ -14,6 +14,8 @@
 	dayjs.extend(relativeTime);
 
 	import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
+	import { fly } from 'svelte/transition';
+	import { thinkingBudget } from '$lib/stores/thinking';
 
 	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
 	import { pickAndDownloadFile } from '$lib/utils/onedrive-file-picker';
@@ -100,6 +102,8 @@
 	import TerminalMenu from './MessageInput/TerminalMenu.svelte';
 	import Component from '../icons/Component.svelte';
 	import PlusAlt from '../icons/PlusAlt.svelte';
+	import LightBulb from '../icons/LightBulb.svelte';
+	import Check from '../icons/Check.svelte';
 	import Dropdown from '../common/Dropdown.svelte';
 
 	import CommandSuggestionList from './MessageInput/CommandSuggestionList.svelte';
@@ -200,6 +204,31 @@
 	export let oauthRedirectHandler: Function = () => {};
 
 	let showTerminalMenu = false;
+
+	// --- Thinking Level State ---
+	let showThinkingDropdown = false;
+	
+
+	const defaultBudgets = { flash: 0, standard: 512, extended: 2048, deep: -1 };
+	const defaultKeys = ['flash', 'standard', 'extended', 'deep'];
+
+	$: budgets = defaultKeys.map((key) => ({
+		key,
+		value: $settings?.thinkingBudgets?.[key]?.value ?? defaultBudgets[key],
+		label: key === 'flash' ? 'Flash' : key === 'standard' ? 'Standard' : key === 'extended' ? 'Extended' : 'Deep Reasoning',
+		description: key === 'flash' ? 'Quickest reply' : key === 'standard' ? 'Best for most questions' : key === 'extended' ? 'Complex problem solving' : 'Get Detailed Reports'
+	}));
+
+
+
+
+
+	function selectThinkingBudget(value) {
+		$thinkingBudget = value;
+		showThinkingDropdown = false;
+	}
+
+
 
 	export let messageQueue: { id: string; prompt: string; files: any[] }[] = [];
 	export let onQueueSendNow: (id: string) => void = () => {};
@@ -2246,6 +2275,49 @@
 											<PlusAlt className="size-5" />
 										</button>
 									</InputMenu>
+
+										<Dropdown
+									bind:show={showThinkingDropdown}
+									side="bottom"
+									align="start"
+								>
+									<Tooltip content={$i18n.t('Thinking Level')} placement="top">
+										<button
+											id="thinking-level-button"
+											class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-8 flex justify-center items-center outline-hidden focus:outline-hidden"
+											type="button"
+										>
+											<LightBulb className="size-4.5" />
+										</button>
+									</Tooltip>
+										<div slot="content">
+										<div
+											class="w-56 rounded-xl p-0.5 border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850 text-gray-900 dark:text-white shadow-lg outline-hidden"
+											>
+											<div in:fly={{ x: -20, duration: 150 }} class="p-0.5">
+													{#each budgets as item}
+														<button
+															type="button"
+															on:click={() => selectThinkingBudget(item.value)}
+															title={item.description}
+															class="flex w-full items-center gap-2 h-[1.6875rem] px-2 text-[0.8125rem] font-normal rounded-xl select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 {$thinkingBudget === item.value ? 'bg-gray-50/60 dark:bg-gray-800/60 font-medium' : ''}"
+															>
+																<LightBulb class="size-3.5 shrink-0 text-gray-400 dark:text-gray-500" />
+																<span class="flex-1 text-left truncate">{item.label}</span>
+																{#if item.value === -1}
+														<span class="text-[0.6875rem] text-gray-400 dark:text-gray-500">Max</span>
+													{:else if item.value > 0}
+														<span class="text-[0.6875rem] text-gray-400 dark:text-gray-500">{item.value}tk</span>
+													{/if}
+																{#if $thinkingBudget === item.value}
+																	<Check class="size-3.5 shrink-0" />
+																{/if}
+														</button>
+													{/each}
+											</div>
+										</div>
+									</div>
+								</Dropdown>
 
 									{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || showSkillsButton || (toggleFilters && toggleFilters.length > 0)}
 										<div
