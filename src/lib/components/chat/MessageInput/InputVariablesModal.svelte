@@ -141,7 +141,7 @@
 															<input
 																type="checkbox"
 																bind:checked={variableValues[variable]}
-																class="size-3.5 rounded cursor-pointer border border-gray-200 dark:border-gray-700"
+																class="size-3.5 rounded cursor-pointer border border-gray-200 dark:border-gray-700 outline-hidden"
 																id="input-variable-{idx}"
 																{...variableAttributes}
 															/>
@@ -165,7 +165,7 @@
 														<div class="relative size-6">
 															<input
 																type="color"
-																class="size-6 rounded cursor-pointer border border-gray-200 dark:border-gray-700"
+																class="size-6 rounded cursor-pointer border border-gray-200 dark:border-gray-700 outline-hidden"
 																value={variableValues[variable]}
 																id="input-variable-{idx}"
 																on:input={(e) => {

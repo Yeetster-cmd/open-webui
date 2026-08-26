@@ -238,7 +238,7 @@
 						/>
 					{/if}
 					<label class="flex items-center gap-1.5 cursor-pointer text-xs text-gray-400 ml-auto">
-						<input type="checkbox" class="accent-blue-500" bind:checked={allDay} />
+						<input type="checkbox" class="accent-blue-500 outline-hidden" bind:checked={allDay} />
 						{$i18n.t('All day')}
 					</label>
 				</div>

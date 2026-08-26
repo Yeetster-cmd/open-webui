@@ -415,11 +415,6 @@ input[type='number'] {
 	outline-offset: -2px;
 }
 
-html.high-contrast :is(input, textarea, [contenteditable='true'], .ProseMirror):focus-visible {
-	outline: 2px solid theme(--color-blue-500);
-	outline-offset: -2px;
-}
-
 .ProseMirror p.is-editor-empty:first-child::before {
 	content: attr(data-placeholder);
 	float: left;

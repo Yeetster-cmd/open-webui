@@ -1698,7 +1698,7 @@
 	</div>
 
 	<div class="flex items-center gap-1.5">
-		<input type="checkbox" bind:checked={deleteDirectoryContents} />
+		<input type="checkbox" class="outline-hidden" bind:checked={deleteDirectoryContents} />
 
 		<div class="text-xs text-gray-500">
 			{$i18n.t('Delete all contents inside this directory')}

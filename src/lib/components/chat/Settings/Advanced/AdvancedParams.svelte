@@ -89,7 +89,7 @@
 				{max}
 				step={rangeStep}
 				bind:value={params[key]}
-				class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+				class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 outline-hidden"
 			/>
 		</div>
 		<div>
@@ -97,7 +97,7 @@
 				bind:value={params[key]}
 				type="number"
 				aria-label={label}
-				class=" bg-transparent text-center w-14"
+				class=" bg-transparent text-center w-14 outline-hidden"
 				{min}
 				max={numberMax}
 				step={numberStep}
@@ -629,7 +629,7 @@
 						step="1"
 						value={params.top_k}
 						on:input={setTopK}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 outline-hidden"
 					/>
 				</div>
 				<div>
@@ -637,7 +637,7 @@
 						value={params.top_k}
 						type="number"
 						aria-label="top_k"
-						class=" bg-transparent text-center w-14"
+						class=" bg-transparent text-center w-14 outline-hidden"
 						min="0"
 						max="1000"
 						step="1"

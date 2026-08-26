@@ -53,7 +53,7 @@
 	};
 
 	const inputClass =
-		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700';
 
 	$: events = eventItems.map((item) => item.event);
 	$: eventDetails = Object.fromEntries(eventItems.map((item) => [item.event, item]));
@@ -570,6 +570,7 @@
 						<label class="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300">
 							<input
 								id="event-webhook-all-events"
+								class="outline-hidden"
 								type="checkbox"
 								checked={allEvents}
 								on:change={(event) => setAllEvents(event.currentTarget.checked)}
@@ -628,7 +629,7 @@
 										class="flex items-start gap-2 py-0.5 text-xs text-gray-700 dark:text-gray-300"
 									>
 										<input
-											class="mt-0.5"
+											class="mt-0.5 outline-hidden"
 											type="checkbox"
 											checked={selectedExactEvents.includes(event)}
 											on:change={() => toggleEvent(event)}

@@ -330,7 +330,7 @@
 					<li class="text-start">
 						{#if item?.task}
 							<input
-								class=" translate-y-[1px] -translate-x-1 flex-shrink-0"
+								class=" translate-y-[1px] -translate-x-1 flex-shrink-0 outline-hidden"
 								type="checkbox"
 								checked={item.checked}
 								on:change={(e) => {
@@ -370,7 +370,7 @@
 					<li class="text-start {item?.task ? 'flex -translate-x-6.5 gap-3 ' : ''}">
 						{#if item?.task}
 							<input
-								class="flex-shrink-0"
+								class="flex-shrink-0 outline-hidden"
 								type="checkbox"
 								checked={item.checked}
 								on:change={(e) => {

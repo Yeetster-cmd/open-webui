@@ -354,7 +354,7 @@
 					<input
 						type="checkbox"
 						bind:checked={isProduction}
-						class="w-4 h-4 rounded border-gray-300 dark:border-gray-600"
+						class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 outline-hidden"
 					/>
 					<span class="text-xs text-gray-700 dark:text-gray-300"
 						>{$i18n.t('Set as Production')}</span

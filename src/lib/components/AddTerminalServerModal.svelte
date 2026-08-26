@@ -817,11 +817,11 @@
 								<div class="flex flex-wrap items-center justify-between gap-2 mt-2">
 									<div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
 										<label class="flex items-center gap-1.5">
-											<input type="checkbox" bind:checked={refreshOnlyIdle} />
+											<input type="checkbox" class="outline-hidden" bind:checked={refreshOnlyIdle} />
 											<span>{$i18n.t('Idle only')}</span>
 										</label>
 										<label class="flex items-center gap-1.5">
-											<input type="checkbox" bind:checked={refreshReset} />
+											<input type="checkbox" class="outline-hidden" bind:checked={refreshReset} />
 											<span>{$i18n.t('Reset persisted files')}</span>
 										</label>
 									</div>

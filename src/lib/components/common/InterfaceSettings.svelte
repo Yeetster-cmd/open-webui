@@ -452,7 +452,7 @@
 				<div class="flex-1 flex items-center">
 					<input
 						id="ui-scale-slider"
-						class="w-full"
+						class="w-full outline-hidden"
 						type="range"
 						min="1"
 						max="1.5"

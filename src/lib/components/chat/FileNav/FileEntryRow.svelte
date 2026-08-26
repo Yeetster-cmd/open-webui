@@ -298,7 +298,7 @@
 				<input
 					bind:this={renameInput}
 					bind:value={renameValue}
-					class="flex-1 text-xs bg-transparent border border-gray-100 dark:border-white/[0.06] rounded px-1.5 py-0.5 outline-none focus:border-blue-400 dark:focus:border-blue-500 text-gray-800 dark:text-gray-200 min-w-0"
+					class="flex-1 text-xs bg-transparent border border-gray-100 dark:border-white/[0.06] rounded px-1.5 py-0.5 outline-none text-gray-800 dark:text-gray-200 min-w-0"
 					on:keydown={(e) => {
 						if (e.key === 'Enter') {
 							e.preventDefault();

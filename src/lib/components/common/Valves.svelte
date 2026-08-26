@@ -153,7 +153,7 @@
 									<div class="relative size-6">
 										<input
 											type="color"
-											class="size-6 rounded cursor-pointer border border-gray-200 dark:border-gray-700"
+											class="size-6 rounded cursor-pointer border border-gray-200 dark:border-gray-700 outline-hidden"
 											value={valves[property] ?? '#000000'}
 											on:input={(e) => {
 												// Convert the color value to uppercase immediately

@@ -72,11 +72,11 @@
 
 	let RAGConfig: any = null;
 	const inputClass =
-		'w-full h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+		'w-full h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700';
 	const actionButtonClass =
 		'shrink-0 text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
 	const textareaClass =
-		'w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+		'w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700';
 
 	const embeddingModelUpdateHandler = async () => {
 		if (RAG_EMBEDDING_ENGINE === '' && RAG_EMBEDDING_MODEL.split('/').length - 1 > 1) {
@@ -855,7 +855,7 @@
 						description={$i18n.t('Maximum time in seconds to wait for MinerU API responses.')}
 					>
 						<input
-							class="w-16 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-right text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
+							class="w-16 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-right text-xs text-gray-700 outline-hidden transition-colors dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300"
 							type="number"
 							min="1"
 							bind:value={RAGConfig.MINERU_API_TIMEOUT}
@@ -1386,7 +1386,7 @@
 											max="1"
 											step="0.05"
 											bind:value={RAGConfig.HYBRID_BM25_WEIGHT}
-											class="h-2 w-full cursor-pointer appearance-none rounded-lg dark:bg-gray-700"
+											class="h-2 w-full cursor-pointer appearance-none rounded-lg dark:bg-gray-700 outline-hidden"
 										/>
 										<div
 											class="flex justify-between py-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600"

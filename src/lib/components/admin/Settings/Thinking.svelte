@@ -58,7 +58,7 @@
 					min="0"
 					step="256"
 					bind:value={configValues[level.key].value}
-					class="w-28 h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-right text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
+					class="w-28 h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-right text-gray-700 outline-hidden transition-colors dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300"
 				/>
 			</AdminSettingRow>
 		{/each}
@@ -71,7 +71,7 @@
 					bind:value={configValues[level.key].systemPrompt}
 					rows="3"
 					placeholder="No prompt"
-					className="w-full resize-y rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
+					className="w-full resize-y rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300"
 				/>
 			</AdminSettingField>
 		{/each}

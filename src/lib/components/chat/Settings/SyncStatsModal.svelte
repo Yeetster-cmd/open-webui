@@ -425,7 +425,7 @@
 									checked={syncMode === 'incremental'}
 									on:change={(e) => (syncMode = e.target.checked ? 'incremental' : 'full')}
 									disabled={syncing}
-									class="w-4 h-4 rounded border-gray-300 dark:border-gray-600"
+									class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 outline-hidden"
 								/>
 								<span class="text-gray-700 dark:text-gray-300"
 									>{$i18n.t('Only sync new/updated chats')}</span
